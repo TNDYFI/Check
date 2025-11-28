@@ -1,133 +1,343 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>DYFI-Digital Signature Collector</title>
-<!-- Load Tailwind CSS -->
-<script src="https://cdn.tailwindcss.com"></script>
-<!-- Load Signature Pad and jsPDF libraries -->
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Signature System — Firebase + Web3Forms</title>
+
+<!-- Firebase (compat) -->
+<script src="https://www.gstatic.com/firebasejs/9.6.8/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.8/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.8/firebase-storage-compat.js"></script>
+
+<!-- SignaturePad + jsPDF -->
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<!-- --- FIREBASE GLOBAL SCRIPT LOADS (The most robust way for GitHub Pages) --- -->
-<!-- Load these libraries globally. The main script will NOT use type="module" -->
-<script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
-
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <style>
-    /* Custom Styling Overrides & Fonts */
-    body { 
-        font-family: 'Inter', system-ui, sans-serif; 
-        background-color: #f0f4f8; /* Light blue background */
-        color: #1e293b;
-        min-height: 100vh;
-    }
-    .container-card {
-        background: #ffffff;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-        border: 1px solid #e2e8f0;
-        max-width: 95%;
-        transition: all 0.3s ease;
-    }
-    /* Style for inputs and select for consistency */
-    input, select {
-        padding: 12px;
-        border: 1px solid #cbd5e1;
-        border-radius: 0.5rem;
-        transition: border-color 0.3s, box-shadow 0.3s;
-        box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
-    }
-    input:focus, select:focus {
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-        outline: none;
-    }
-    
-    /* Signature Box Container */
-    #box { 
-        min-height: 35vh; 
-        border: 2px dashed #93c5fd; /* Blue dashed border */
-        background: #f8fafc; 
-        position: relative; 
-        border-radius: 0.75rem;
-        box-shadow: inset 0 1px 4px rgba(0,0,0,0.05);
-    }
-    canvas { 
-        width: 100%; 
-        height: 100%; 
-        display: block; 
-        touch-action: none; /* Prevents scroll/zoom when signing on mobile */
-    }
-
-    /* Message Box for alerts (instead of native alerts) */
-    .message-box {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.7);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-        visibility: hidden;
-        opacity: 0;
-        transition: visibility 0s, opacity 0.3s;
-    }
-    .message-box.active {
-        visibility: visible;
-        opacity: 1;
-    }
-    .message-content {
-        background: white;
-        padding: 30px;
-        border-radius: 12px;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
-        max-width: 90%;
-        width: 350px;
-        text-align: center;
-        transform: scale(0.9);
-        transition: transform 0.3s;
-    }
-    .message-box.active .message-content {
-        transform: scale(1);
-    }
+  :root{
+    --accent:#1a73e8;
+    --accent-dark:#155cb3;
+    --muted:#6b7280;
+    --bg:#f3f4f6;
+    --card:#fff;
+    --success:#0a8f08;
+  }
+  body{margin:0;font-family:Inter, system-ui, Arial; background:var(--bg); color:#111;}
+  .wrap{max-width:980px;margin:28px auto;padding:18px;}
+  header{display:flex;align-items:center;gap:12px}
+  h1{margin:0;font-size:20px}
+  .topbar{display:flex;gap:12px;align-items:center;margin-top:8px;flex-wrap:wrap}
+  .counts{margin-left:auto;display:flex;gap:12px;align-items:center}
+  .count-pill{background:var(--card);padding:8px 12px;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,0.06);font-size:14px}
+  .card{background:var(--card);padding:14px;border-radius:12px;margin-top:16px;box-shadow:0 6px 18px rgba(17,24,39,0.06)}
+  label{display:block;margin:8px 0 6px;font-size:14px;color:var(--muted)}
+  input[type=text], input[type=email]{width:100%;padding:10px;border-radius:8px;border:1px solid #d1d5db;font-size:15px}
+  #container{width:100%;overflow-x:auto;border-radius:10px;border:1px solid #e5e7eb;margin-top:12px;background:linear-gradient(90deg,#fff,#fafafa)}
+  .canvas-wrap{width:1400px;height:420px;position:relative}
+  canvas{display:block;width:100%;height:100%;touch-action:none;background:transparent}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:center}
+  button{padding:10px 14px;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer;font-weight:600}
+  button.ghost{background:#6b7280}
+  button.danger{background:#ef4444}
+  .pdf-menu{position:relative;display:inline-block}
+  .pdf-pop{position:absolute;left:0;top:44px;z-index:40;background:var(--card);padding:8px;border-radius:8px;box-shadow:0 8px 20px rgba(2,6,23,0.08);display:none}
+  .pdf-pop button{display:block;width:220px;margin:6px 0;background:#111;color:#fff}
+  .status{margin-top:10px;color:var(--muted);font-size:14px}
+  footer{margin-top:18px;text-align:center;color:var(--muted);font-size:13px}
+  .small{font-size:13px;color:var(--muted)}
+  @media (max-width:720px){.canvas-wrap{width:1200px;height:320px}}
 </style>
 </head>
-<body class="p-4 md:p-8">
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Signature System — Firebase + Web3Forms</h1>
+      <div class="small">Draw signature, preview/download PDF, save to Firebase & email via Web3Forms (link)</div>
+    </div>
 
-<div class="container-card mx-auto p-6 sm:p-8 rounded-xl">
-    
-    <!-- Header and Count Display -->
-    <header class="mb-6">
-        <h3 class="text-2xl sm:text-3xl font-extrabold text-blue-800 mb-1">
-            DYFI TNPSC பணியிட கையெழுத்து இயக்கம்
-        </h3>
-        <p class="text-gray-500 mb-4">
-            Sign the box below and submit your details to join the campaign.
-        </p>
+    <div class="counts">
+      <div class="count-pill">Signatures: <strong id="sigCount">—</strong></div>
+      <div class="count-pill">Emails sent: <strong id="mailCount">—</strong></div>
+    </div>
+  </header>
 
-        <!-- Live Signature Count Status -->
-        <div id="countStatus" class="bg-indigo-50 border border-indigo-200 text-indigo-800 p-3 rounded-lg shadow-inner flex items-center justify-center space-x-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-5a2 2 0 012-2h-5m-9 0H4v5a2 2 0 002 2h5m0-7a7 7 0 100-14 7 7 0 000 14z"></path></svg>
-            <span id="signatureCount" class="font-bold text-lg">Initializing Database...</span>
+  <div class="card">
+    <label for="name">Name (will appear as: <em>I am the [name]</em>)</label>
+    <input id="name" type="text" placeholder="Enter name...">
+
+    <label for="email">Recipient Email (where PDF link will be sent)</label>
+    <input id="email" type="email" placeholder="recipient@example.com">
+
+    <div style="margin-top:12px" class="small">Background image used in PDF is transparent PNG. You can replace it with your file path.</div>
+
+    <div id="container" class="card" style="margin-top:12px">
+      <div class="canvas-wrap">
+        <!-- background image placed under canvas (will also be injected into PDF) -->
+        <img id="bgImg" src="https://i.ibb.co/3N1xY1G/transparent-bg.png" alt="" style="position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;pointer-events:none;opacity:0.25">
+        <canvas id="canvas"></canvas>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="clearBtn" class="ghost">Clear</button>
+
+      <div class="pdf-menu">
+        <button id="pdfMenuBtn">PDF Options ▾</button>
+        <div id="pdfPop" class="pdf-pop">
+          <button id="previewPdfBtn">Preview PDF</button>
+          <button id="downloadPdfBtn">Download PDF</button>
         </div>
-    </header>
+      </div>
 
-    <!-- Input Fields -->
-    <div class="space-y-4 mb-6">
-        <input id="name" placeholder="Enter Your Name" class="w-full">
-        <input id="number" type="tel" placeholder="Enter Your Phone Number" class="w-full">
+      <button id="saveBtn" style="background:var(--success)">Save & Send Email</button>
 
-        <!-- Native Place Select Dropdown -->
-        <select id="district" class="w-full" required>
-            <option value="" disabled selected>Choose Your District</option>
-            <option value="Ariyalur">அரியலூர் - Ariyalur</option>
-            <option value="Chengalpattu">செங்கல்பட்டு - Chengalpattu</option>
-            <option value="Chennai">சென்னை - Chennai</option>
-            <option value="Coimbatore">கோயம்புத்தூர் - Coimbatore</
+      <div style="margin-left:auto" class="small status" id="status">Ready</div>
+    </div>
 
+  </div>
+
+  <footer>Hosted on GitHub Pages — works as static site. Replace background PNG with your file if needed.</footer>
+</div>
+
+<script>
+/* -------------------- FIREBASE CONFIG (from your JSON) --------------------
+ Use the values you gave. I constructed the typical web config fields.
+ -------------------------------------------------------------------------*/
+const firebaseConfig = {
+  apiKey: "AIzaSyBLyf_dz6xPC9wdthZSVtpatkc8JgFhE4Q",
+  authDomain: "chatbox-chats.firebaseapp.com",
+  databaseURL: "https://chatbox-chats-default-rtdb.firebaseio.com",
+  projectId: "chatbox-chats",
+  storageBucket: "chatbox-chats.appspot.com",
+  messagingSenderId: "10200860576",
+  appId: "1:10200860576:android:262315d86f6d1732ddc6c5"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const storage = firebase.storage();
+
+/* -------------------- UI elements -------------------- */
+const canvas = document.getElementById('canvas');
+const bgImg = document.getElementById('bgImg');
+const clearBtn = document.getElementById('clearBtn');
+const pdfMenuBtn = document.getElementById('pdfMenuBtn');
+const pdfPop = document.getElementById('pdfPop');
+const previewPdfBtn = document.getElementById('previewPdfBtn');
+const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+const saveBtn = document.getElementById('saveBtn');
+const nameInput = document.getElementById('name');
+const emailInput = document.getElementById('email');
+const statusEl = document.getElementById('status');
+const sigCountEl = document.getElementById('sigCount');
+const mailCountEl = document.getElementById('mailCount');
+
+/* -------------------- Canvas setup (high-DPI + scroll width) -------------------- */
+const container = document.querySelector('.canvas-wrap');
+const initialWidth = 1400; // wide canvas for longer signatures
+function setupCanvas(width = initialWidth){
+  const ratio = window.devicePixelRatio || 1;
+  canvas.width = width * ratio;
+  canvas.height = container.clientHeight * ratio;
+  canvas.style.width = width + 'px';
+  canvas.style.height = container.clientHeight + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(ratio, ratio);
+}
+setupCanvas();
+window.addEventListener('resize', ()=> setupCanvas());
+
+const signaturePad = new SignaturePad(canvas, { backgroundColor: 'transparent', penColor: '#0b63e6', minWidth:1.6, maxWidth:3.5 });
+
+clearBtn.addEventListener('click', ()=> { signaturePad.clear(); status('Cleared'); });
+
+/* -------------------- PDF generation helpers -------------------- */
+async function createPDFBlobAndBase64(){
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+
+  const name = (nameInput.value || 'Anonymous').trim();
+  pdf.setFontSize(18);
+  pdf.text(`I am the ${name}`, 40, 40);
+
+  // Add background if available (draw full-bleed style inside margins)
+  try {
+    const bg = await loadImage(bgImg.src);
+    // draw bg to match page size
+    pdf.addImage(bg, 'PNG', 20, 60, pageW-40, pageH-120);
+  } catch(e){
+    // background may fail (CORS) — silently continue
+    console.warn('BG load failed', e);
+  }
+
+  // Signature: make an image from canvas scaled to fit in page area
+  const sigDataUrl = canvas.toDataURL('image/png');
+
+  // Determine insert box — keep margins
+  const insertX = 40;
+  const insertY = 80;
+  const insertW = pageW - 80;
+  const insertH = pageH - 160;
+
+  // maintain aspect ratio of the canvas image when fitting
+  const img = await loadImage(sigDataUrl);
+  const ratio = Math.min(insertW / img.width, insertH / img.height);
+  const drawW = img.width * ratio;
+  const drawH = img.height * ratio;
+  const drawX = insertX + ((insertW - drawW) / 2);
+  const drawY = insertY + ((insertH - drawH) / 2);
+
+  pdf.addImage(img, 'PNG', drawX, drawY, drawW, drawH);
+
+  // Return blob and base64-datauri
+  const blob = pdf.output('blob');
+  const dataUri = pdf.output('datauristring');
+  return { blob, dataUri };
+}
+
+function loadImage(src){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous'; // important for cross origin images
+    img.onload = () => resolve(img);
+    img.onerror = (e) => reject(e);
+    img.src = src;
+  });
+}
+
+/* -------------------- PDF Options UI -------------------- */
+pdfMenuBtn.addEventListener('click', ()=> {
+  pdfPop.style.display = pdfPop.style.display === 'block' ? 'none' : 'block';
+});
+
+previewPdfBtn.addEventListener('click', async ()=> {
+  if(signaturePad.isEmpty()){ alert('Please sign first'); return; }
+  status('Generating preview...');
+  try {
+    const { dataUri } = await createPDFBlobAndBase64();
+    window.open(dataUri, '_blank');
+    status('Preview opened');
+  } catch(e){
+    console.error(e);
+    status('Preview failed');
+    alert('Preview failed: ' + (e.message||e));
+  } finally { pdfPop.style.display = 'none'; }
+});
+
+downloadPdfBtn.addEventListener('click', async ()=> {
+  if(signaturePad.isEmpty()){ alert('Please sign first'); return; }
+  status('Preparing download...');
+  try {
+    const { dataUri } = await createPDFBlobAndBase64();
+    const a = document.createElement('a');
+    a.href = dataUri;
+    a.download = `Signature_${(nameInput.value||'anon').replace(/\s+/g,'_')}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    status('Download started');
+  } catch(e){
+    console.error(e);
+    status('Download failed');
+    alert('Download failed: ' + (e.message||e));
+  } finally { pdfPop.style.display = 'none'; }
+});
+
+/* -------------------- Firebase counters realtime -------------------- */
+const sigCountRef = db.ref('counters/signatures');
+const mailCountRef = db.ref('counters/emails');
+
+function listenCounts(){
+  sigCountRef.on('value', snap => {
+    const v = snap.val() || 0;
+    sigCountEl.innerText = v;
+  });
+  mailCountRef.on('value', snap => {
+    const v = snap.val() || 0;
+    mailCountEl.innerText = v;
+  });
+}
+listenCounts();
+
+/* -------------------- Save to Storage + DB + Web3Forms mail -------------------- */
+const WEB3FORMS_KEY = '6e1efc51-93b3-4ffc-8d33-a446ca6eacd8';
+
+saveBtn.addEventListener('click', async ()=> {
+  if(signaturePad.isEmpty()){ alert('Please sign first'); return; }
+  const name = (nameInput.value||'').trim();
+  const email = (emailInput.value||'').trim();
+  if(!name){ alert('Enter name'); nameInput.focus(); return; }
+  if(!email){ alert('Enter recipient email'); emailInput.focus(); return; }
+
+  status('Generating PDF...');
+  try {
+    // create pdf blob + base64
+    const { blob } = await createPDFBlobAndBase64();
+
+    status('Uploading PDF to Firebase Storage...');
+    // create unique path
+    const ts = Date.now();
+    const storageRef = storage.ref().child(`signatures/sign_${ts}.pdf`);
+    // upload blob
+    const uploadTask = storageRef.put(blob);
+
+    // wait for upload completion
+    await new Promise((resolve, reject) => {
+      uploadTask.on('state_changed',
+        ()=>{}, // progress ignored
+        err => reject(err),
+        ()=> resolve()
+      );
+    });
+
+    // get public download URL
+    const downloadURL = await storageRef.getDownloadURL();
+
+    status('Saving metadata in Realtime DB...');
+    // push metadata node
+    const metaRef = db.ref('signatures').push();
+    const meta = { name, downloadURL, createdAt: firebase.database.ServerValue.TIMESTAMP };
+    await metaRef.set(meta);
+
+    // increment counters atomically (transaction)
+    await sigCountRef.transaction(current => (current || 0) + 1);
+    // send email (via Web3Forms) with link
+    status('Sending email via Web3Forms...');
+    const wfForm = new FormData();
+    wfForm.append('access_key', WEB3FORMS_KEY);
+    wfForm.append('subject', `Signature from ${name}`);
+    wfForm.append('name', name);
+    wfForm.append('email', email);
+    wfForm.append('message', `A new signature has been saved. Download: ${downloadURL}`);
+    wfForm.append('redirect', 'https://web3forms.com/success');
+
+    const resp = await fetch('https://api.web3forms.com/submit', { method:'POST', body: wfForm });
+    const json = await resp.json();
+
+    if(json.success){
+      // increment mail count
+      await mailCountRef.transaction(current => (current || 0) + 1);
+      status('Saved & Email sent ✅');
+      alert('PDF uploaded and email sent successfully!');
+    } else {
+      status('Saved but email failed');
+      alert('Saved to Firebase but email failed: ' + (json.message || 'unknown'));
+    }
+
+  } catch (err){
+    console.error(err);
+    status('Error: see console');
+    alert('Operation failed: ' + (err.message || err));
+  }
+});
+
+/* -------------------- small helpers -------------------- */
+function status(text){ statusEl.innerText = text; }
+</script>
+</body>
+</html>
