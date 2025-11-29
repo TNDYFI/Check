@@ -177,7 +177,19 @@ setupCanvas();
 clearBtn.onclick = ()=> signaturePad.clear();
 
 /* ----------------------------- PDF creation (returns blob) ----------------------------- */
-const LOGO_URL = 'https://tndyfi.github.io/Signature/images/preview.jpg'; 
+  const name = (document.getElementById('name').value||'').trim() || 'Unsigned User';
+  const district = (document.getElementById('district').value||'Not selected');
+  const number = (document.getElementById('number').value||'');
+
+  pdf.setFontSize(20);
+  pdf.text('DYFI — TNPSC Signature movement', 40, 40);
+  pdf.setFontSize(14);
+  pdf.text(`Name: ${name}`, 40, 68);
+  pdf.text(`Phone: ${number}`, 40, 88);
+  pdf.text(`District: ${district}`, 40, 108);
+  pdf.text(`Date: ${new Date().toLocaleString()}`, 40, 128);
+  
+const LOGO_URL = 'https://tndyfi.github.io/Signature/images/preview.png'; 
 
 async function createPDFBlob(){
   const { jsPDF } = window.jspdf;
