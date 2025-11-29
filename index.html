@@ -3,25 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <title>DYFI — E-Signature </title>
-<!-- Favicons -->
-  <link rel="shortcut icon" href="images/preview.jpg" type="image/svg+xml">
-<!-- WhatsApp / Facebook / Instagram Preview -->
+<link rel="shortcut icon" href="images/preview.jpg" type="image/svg+xml">
 <meta property="og:title" content="DYFI Tnpsc Digital Signature Moment">
 <meta property="og:description" content=" Dyfi - Tnpsc Digital Signature - DYFI Tamil Nadu">
 <meta property="og:image" content="https://tndyfi.github.io/Signature/images/previews.png">
 <meta property="og:url" content="https://tndyfi.github.io/Signature/">
 <meta property="og:type" content="website">
 
-<!-- WhatsApp High Quality Preview -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://tndyfi.github.io/Signature/images/previews.png">
 
-<!-- Firebase (compat) -->
 <script src="https://www.gstatic.com/firebasejs/9.6.8/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.8/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.8/firebase-storage-compat.js"></script>
 
-<!-- SignaturePad + jsPDF -->
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -92,7 +87,7 @@ button.green{background:#0a8f08}
     <option value="Tirupattur">திருப்பத்தூர் - Tirupattur</option>
     <option value="Tiruppur">திருப்பூர் - Tiruppur</option>
     <option value="Tiruvallur">திருவள்ளூர் - Tiruvallur</option>
-    <option value="Tiruvannamalai">திருவண்ணாமலை - Tiruvannamalai</option>
+    <option value="Tiruvannamalai">திருவண்ணாமலை - திருவண்ணாமலை</option>
     <option value="Tiruvarur">திருவாரூர் - Tiruvarur</option>
     <option value="Vellore">வேலூர் - Vellore</option>
     <option value="Viluppuram">விழுப்புரம் - Viluppuram</option>
@@ -121,7 +116,6 @@ button.green{background:#0a8f08}
   <div class="small" style="margin-top:12px">DYFI - தமிழ்நாடு மாநிலக்குழு</div>
 </div>
 
-<!-- message box -->
 <div id="msg" class="message-box"><div class="message-content"><p id="msgText"></p><button id="msgOk">OK</button></div></div>
 
 <script>
@@ -177,26 +171,14 @@ setupCanvas();
 clearBtn.onclick = ()=> signaturePad.clear();
 
 /* ----------------------------- PDF creation (returns blob) ----------------------------- */
-  const name = (document.getElementById('name').value||'').trim() || 'Unsigned User';
-  const district = (document.getElementById('district').value||'Not selected');
-  const number = (document.getElementById('number').value||'');
-
-  pdf.setFontSize(20);
-  pdf.text('DYFI — TNPSC Signature movement', 40, 40);
-  pdf.setFontSize(14);
-  pdf.text(`Name: ${name}`, 40, 68);
-  pdf.text(`Phone: ${number}`, 40, 88);
-  pdf.text(`District: ${district}`, 40, 108);
-  pdf.text(`Date: ${new Date().toLocaleString()}`, 40, 128);
-  
-const LOGO_URL = 'https://tndyfi.github.io/Signature/images/preview.png'; 
+// Using the favicon image as the logo. Ensure the path/URL is correct and accessible.
+const LOGO_URL = 'https://tndyfi.github.io/Signature/images/previews.png'; 
 
 async function createPDFBlob(){
   const { jsPDF } = window.jspdf;
   
-  // *** A4 SIZE IS SET HERE ***
+  // A4 size is set here
   const pdf = new jsPDF('landscape','pt','a4'); 
-  // **************************
 
   const pdfW = pdf.internal.pageSize.getWidth();
   const pdfH = pdf.internal.pageSize.getHeight();
@@ -204,25 +186,33 @@ async function createPDFBlob(){
   const name = (document.getElementById('name').value||'').trim() || 'Unsigned User';
   const district = (document.getElementById('district').value||'Not selected');
   const number = (document.getElementById('number').value||'');
-  const date = new Date().toLocaleString();
   
-  // --- 1. Add Logo (top-left) ---
-  try {
-    const logoImg = new Image();
-    logoImg.crossOrigin = 'anonymous'; 
-    logoImg.src = LOGO_URL;
-    await new Promise((resolve, reject) => {
-        logoImg.onload = resolve;
-        logoImg.onerror = reject;
-    });
-    // Add image: dataUrl, format, x, y, width, height
-    pdf.addImage(logoImg, 'JPEG', 40, 20, 60, 60); // Placing logo in top-left (x=40, y=20)
-  } catch(e) {
-    console.warn("Logo failed to load:", e);
-  }
-  // signature box area
-  const signY = 150;
-  const signH = pdfH - signY - 60;
+  // --- PDF Content Layout ---
+  
+  // 1. Title (Bold and Larger)
+  pdf.setFontSize(28); 
+  pdf.setFont(undefined, 'bold'); 
+  pdf.text('DYFI — TNPSC Signature Movement', pdfW / 2, 50, {align:'center'}); 
+  pdf.setFont(undefined, 'normal'); 
+
+  // 2. User Details
+  const detailX = 40;
+  let detailY = 100;
+  const detailSpacing = 20;
+
+  pdf.setFontSize(14); 
+  pdf.text(`Name: ${name}`, detailX, detailY);
+  detailY += detailSpacing;
+  pdf.text(`Phone: ${number}`, detailX, detailY);
+  detailY += detailSpacing;
+  pdf.text(`District: ${district}`, detailX, detailY);
+  detailY += detailSpacing;
+  pdf.text(`Date: ${new Date().toLocaleString()}`, detailX, detailY);
+  
+  // 3. Signature Box Area
+  const signY = detailY + 40; // Start signature box below details + margin
+  const signH = pdfH - signY - 40; // Remaining height, with a 40pt bottom margin
+  
   pdf.setLineWidth(1.5);
   pdf.rect(40, signY, pdfW - 80, signH);
 
@@ -230,6 +220,7 @@ async function createPDFBlob(){
     const dataUrl = signaturePad.toDataURL('image/png');
     // fit signature into box preserving aspect ratio
     const img = new Image();
+    img.crossOrigin = 'anonymous'; 
     img.src = dataUrl;
     await new Promise(r => img.onload = r);
     const maxW = pdfW - 80;
@@ -242,7 +233,22 @@ async function createPDFBlob(){
     pdf.addImage(dataUrl, 'PNG', drawX, drawY, drawW, drawH);
   } else {
     pdf.setFontSize(14);
-    pdf.text('NO SIGNATURE', pdfW/2, pdfH/2, {align:'center'});
+    pdf.text('NO SIGNATURE', pdfW/2, signY + signH/2, {align:'center'}); 
+  }
+  
+  // 4. Logo (Top-left, below header)
+  try {
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'anonymous'; 
+    logoImg.src = LOGO_URL;
+    await new Promise((resolve, reject) => {
+        logoImg.onload = resolve;
+        logoImg.onerror = reject;
+    });
+    // Add image: dataUrl, format, x, y, width, height
+    pdf.addImage(logoImg, 'JPEG', 40, 20, 60, 60); 
+  } catch(e) {
+    console.warn("Logo failed to load:", e);
   }
 
   return pdf.output('blob');
@@ -282,6 +288,7 @@ downloadBtn.onclick = async ()=>{
 const sigCountRef = db.ref('signature_count');
 const mailCountRef = db.ref('email_count');
 
+// These listeners will now run because the syntax error was removed.
 sigCountRef.on('value', snap => { sigCountEl.innerText = snap.exists() ? snap.val() : 0; });
 mailCountRef.on('value', snap => { mailCountEl.innerText = snap.exists() ? snap.val() : 0; });
 
