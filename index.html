@@ -177,8 +177,8 @@ const LOGO_URL = 'https://tndyfi.github.io/Signature/images/previews.png';
 async function createPDFBlob(){
   const { jsPDF } = window.jspdf;
   
-  // A4 size is set here
-  const pdf = new jsPDF('vertical','pt','a4'); 
+  // *** RESTORED TO LANDSCAPE FOR BETTER A4 LAYOUT ***
+  const pdf = new jsPDF('landscape','pt','a4'); 
 
   const pdfW = pdf.internal.pageSize.getWidth();
   const pdfH = pdf.internal.pageSize.getHeight();
@@ -189,13 +189,30 @@ async function createPDFBlob(){
   
   // --- PDF Content Layout ---
   
-  // 1. Title (Bold and Larger)
+  // 1. Logo (Top-left)
+  try {
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'anonymous'; 
+    logoImg.src = LOGO_URL;
+    await new Promise((resolve, reject) => {
+        logoImg.onload = resolve;
+        logoImg.onerror = reject;
+    });
+    // Add image: dataUrl, format, x, y, width, height
+    // Adjusted logo coordinates: X=40 (left margin), Y=20 (top margin), Size=60x60
+    pdf.addImage(logoImg, 'JPEG', 40, 20, 60, 60); 
+  } catch(e) {
+    console.warn("Logo failed to load:", e);
+  }
+
+  // 2. Title (Bold and Larger) - positioned centrally, aligned with the top area
   pdf.setFontSize(28); 
   pdf.setFont(undefined, 'bold'); 
+  // Centered Title: Y=50 works well in this space
   pdf.text('DYFI — TNPSC Signature Movement', pdfW / 2, 50, {align:'center'}); 
   pdf.setFont(undefined, 'normal'); 
 
-  // 2. User Details
+  // 3. User Details - starting just below the header area (Y=100)
   const detailX = 40;
   let detailY = 100;
   const detailSpacing = 20;
@@ -209,8 +226,8 @@ async function createPDFBlob(){
   detailY += detailSpacing;
   pdf.text(`Date: ${new Date().toLocaleString()}`, detailX, detailY);
   
-  // 3. Signature Box Area
-  const signY = detailY + 40; // Start signature box below details + margin
+  // 4. Signature Box Area - starts below details + margin (signY)
+  const signY = detailY + 40; 
   const signH = pdfH - signY - 40; // Remaining height, with a 40pt bottom margin
   
   pdf.setLineWidth(1.5);
@@ -234,21 +251,6 @@ async function createPDFBlob(){
   } else {
     pdf.setFontSize(14);
     pdf.text('NO SIGNATURE', pdfW/2, signY + signH/2, {align:'center'}); 
-  }
-  
-  // 4. Logo (Top-left, below header)
-  try {
-    const logoImg = new Image();
-    logoImg.crossOrigin = 'anonymous'; 
-    logoImg.src = LOGO_URL;
-    await new Promise((resolve, reject) => {
-        logoImg.onload = resolve;
-        logoImg.onerror = reject;
-    });
-    // Add image: dataUrl, format, x, y, width, height
-    pdf.addImage(logoImg, 'JPEG', 60, 40, 80, 80); 
-  } catch(e) {
-    console.warn("Logo failed to load:", e);
   }
 
   return pdf.output('blob');
