@@ -300,9 +300,10 @@ async function createPDFBlob(){
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(10, 10, 10);
     
-    // Use .text(..., 'right') alignment
+  
+  //----- Use .text(..., 'right') alignment
     const textX = pdfW - paddingX;
-    let textY = sigY + sigH + 18;
+    let textY = sigY + sigH + 20;
 
     pdf.text(`${name}`, textX, textY, { align: 'right' });
     textY += 18;
